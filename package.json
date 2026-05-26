@@ -1,0 +1,23 @@
+{
+  "name": "water-bubble-starter",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "spansh-export": "node scripts/spansh_radius_export.mjs -r \"Col 285 Sector FI-J c9-2\" -d 75 -o public/systems-spansh.csv",
+    "spansh-proxy": "node scripts/server/spansh-proxy.mjs",
+    "test-spansh-export": "node scripts/test_spansh_get_csv.mjs"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "papaparse": "^5.5.3",
+    "three": "^0.182.0"
+  }
+}

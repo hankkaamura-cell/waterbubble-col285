@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Water Bubble – Starter</title>
+  </head>
+
+  <body>
+    <!-- Frame: rein dekorativ (PNG mit Alpha) -->
+    <div id="frame"></div>
+
+    <!-- Safe Zones -->
+    <div id="slotCenter">
+      <canvas id="scene"></canvas>
+    </div>
+
+    <aside id="panelLeft" class="panel">
+      <div class="panelTitle">LEGEND &amp; FILTERS</div>
+
+      <div class="panelSection">
+        <div class="sectionTitle">Economy</div>
+        <div id="econList" class="econList"></div>
+      </div>
+
+      <div class="panelSection" style="overflow-y:auto; max-height:22vh;">
+        <div class="sectionTitle">Filters</div>
+
+        <label class="chk">
+          <input id="chkGrid" type="checkbox" checked />
+          <span>Grid (GLOBAL)</span>
+        </label>
+
+        <label class="chk">
+          <input id="chkLinks" type="checkbox" checked />
+          <span>Links / Connections</span>
+        </label>
+
+        <label class="chk">
+          <input id="chkDim" type="checkbox" checked />
+          <span>Dim Neighbors</span>
+        </label>
+
+        <label class="chk">
+          <input id="chkTooltip" type="checkbox" checked />
+          <span>Hover Tooltip</span>
+        </label>
+      </div>
+    </aside>
+
+    <aside id="panelRight" class="panel">
+      <div id="statsTitle" class="panelTitle">STATISTICS</div>
+      <div id="statsRows" class="statsRows"></div>
+    </aside>
+
+    <footer id="consoleBar">
+      <!-- Zeile 1: Haupt-Buttons -->
+      <div class="consoleTop">
+        <div class="consoleLabel">CONSOLE</div>
+        <div class="consoleButtons">
+          <button id="btnReset"  class="btn">RESET VIEW</button>
+          <button id="btnGlobal" class="btn btnPrimary">GLOBAL</button>
+          <button id="btnSystem" class="btn">SYSTEM</button>
+        </div>
+        <button id="btnDeselect" class="btn btnGhost">DESELECT</button>
+      </div>
+
+      <!-- Zeile 2: Radius-Steuerung -->
+      <div class="consoleRadius">
+        <span class="consoleLabel">SET RADIUS AROUND</span>
+
+        <select id="selectCenter" class="consoleSelect" title="Zentrum wählen">
+          <!-- Wird per JS aus den geladenen Systemen befüllt -->
+          <option value="Col 285 Sector FI-J c9-2">Col 285 Sector FI-J c9-2</option>
+        </select>
+
+        <input
+          id="sliderRadius"
+          type="range"
+          min="1" max="75" value="30"
+          class="consoleSlider"
+          title="Radius in Lichtjahren (max. 75 ly)"
+        />
+
+        <span id="labelRadius" class="consolePill">30 ly</span>
+
+        <button id="btnApplyRadius" class="btn btnPrimary">APPLY</button>
+      </div>
+    </footer>
+
+    <div id="tooltip" class="tooltip" hidden></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

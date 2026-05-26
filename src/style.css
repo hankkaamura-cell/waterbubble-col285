@@ -1,0 +1,399 @@
+/* =========================================================
+   [LAY-00] Basic
+========================================================= */
+:root {
+  --ui-bg: rgba(10, 18, 30, 0.78);
+  --ui-bg-2: rgba(12, 22, 40, 0.62);
+  --ui-line: rgba(255, 255, 255, 0.10);
+  --ui-text: rgba(255, 255, 255, 0.86);
+  --ui-text-dim: rgba(255, 255, 255, 0.55);
+  --ui-accent: rgba(120, 190, 255, 0.9);
+
+  /* =======================================================
+     [LAY-01] SAFE ZONES (Percent of viewport)
+     -> Hier justierst du das „Sitzen“ auf den blauen Bereichen.
+     ======================================================= */
+  --center-x: 0.26;
+  --center-y: 0.11;
+  --center-w: 0.5;
+  --center-h: 0.435;
+
+  --left-x: 0.04;
+  --left-y: 0.055;
+  --left-w: 0.12;
+  --left-h: 0.58;
+
+  --right-x: 0.85;
+  --right-y: 0.09;
+  --right-w: 0.12;
+  --right-h: 0.5;
+
+  /* Tastatur/Console: weiter nach rechts, tiefer */
+  --console-x: 0.28;
+  --console-y: 0.7;
+  --console-w: 0.47;
+  --console-h: 0.18;
+
+  /* =======================================================
+     [LAY-02] "Monitor-Perspective" (optisch)
+     ======================================================= */
+  --persp: 1200px;
+  --tilt-side: 12deg;
+  --tilt-console: 0deg;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: auto;
+  background: #000;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--ui-text);
+}
+
+/* Frame PNG */
+#frame {
+  position: fixed;
+  inset: 0;
+  background: url("/console_frame.png") center / cover no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* =========================================================
+   [LAY-10] Slots (safe zones)
+========================================================= */
+#slotCenter,
+#panelLeft,
+#panelRight,
+#consoleBar {
+  position: fixed;
+  z-index: 2;
+}
+
+/* Center monitor */
+#slotCenter {
+  left: calc(var(--center-x) * 100vw);
+  top: calc(var(--center-y) * 100vh);
+  width: calc(var(--center-w) * 100vw);
+  height: calc(var(--center-h) * 100vh);
+
+  /* Optional: „leicht nach hinten gekippt“ – kann bleiben, weil wir per BoundingRect messen */
+  transform-origin: center center;
+  transform: perspective(var(--persp)) rotateX(2deg);
+}
+
+#scene {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Side panels */
+#panelLeft {
+  left: calc(var(--left-x) * 100vw);
+  top: calc(var(--left-y) * 100vh);
+  width: calc(var(--left-w) * 100vw);
+  height: calc(var(--left-h) * 100vh);
+  transform-origin: right center;
+  transform: perspective(var(--persp)) rotateY(var(--tilt-side));
+}
+
+#panelRight {
+  left: calc(var(--right-x) * 100vw);
+  top: calc(var(--right-y) * 100vh);
+  width: calc(var(--right-w) * 100vw);
+  height: calc(var(--right-h) * 100vh);
+  transform-origin: left center;
+  transform: perspective(var(--persp)) rotateY(calc(-1 * var(--tilt-side)));
+}
+
+/* Console */
+#consoleBar {
+  left: calc(var(--console-x) * 100vw);
+  top: calc(var(--console-y) * 100vh);
+  width: calc(var(--console-w) * 100vw);
+  height: calc(var(--console-h) * 100vh);
+  transform-origin: center top;
+  transform: perspective(var(--persp)) rotateX(var(--tilt-console));
+}
+
+/* =========================================================
+   [UI-10] Panel look
+========================================================= */
+.panel {
+  background: linear-gradient(180deg, var(--ui-bg), rgba(10, 18, 30, 0));
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0);
+  overflow: auto;
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+}
+
+.panelTitle {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--ui-line);
+  text-transform: uppercase;
+}
+
+.panelSection {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0);
+}
+
+.sectionTitle {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-text-dim);
+  margin-bottom: 8px;
+}
+
+/* Left panel must scroll (Regression-Fix) */
+#panelLeft {
+  overflow: hidden;
+}
+#panelLeft .panelSection:last-child {
+  border-bottom: none;
+}
+#panelLeft .econList {
+  max-height: 38vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-right: 4px;
+}
+#panelLeft .econList::-webkit-scrollbar {
+  width: 10px;
+}
+#panelLeft .econList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.062);
+  border-radius: 999px;
+}
+
+/* checkbox row */
+.chk {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--ui-text);
+}
+.chk input {
+  accent-color: rgba(120, 190, 255, 0.9);
+}
+
+/* Econ list items */
+.econItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(10, 18, 30, 0.35);
+}
+.econLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) inset;
+}
+.econName {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: auto;
+  text-overflow: ellipsis;
+  color: var(--ui-text);
+}
+.econItem input {
+  accent-color: rgba(120, 190, 255, 0.9);
+}
+
+/* Stats */
+.statsRows {
+  padding: 10px 12px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.statsRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+.statsKey {
+  color: var(--ui-text-dim);
+}
+.statsVal {
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+/* Console */
+#consoleBar {
+  background: linear-gradient(180deg, rgba(10, 18, 30, 0.85), rgba(10, 18, 30, 0.55));
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  overflow: auto;
+}
+
+.consoleTop {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.consoleLabel {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: var(--ui-text);
+}
+
+.consoleButtons {
+  display: flex;
+  justify-content: center; /* Buttons zentriert (wie gewünscht) */
+  gap: 10px;
+}
+
+.btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--ui-text);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: rgba(120, 190, 255, 0.55);
+}
+.btnPrimary {
+  border-color: rgba(120, 190, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(120, 190, 255, 0.22) inset;
+}
+.btnGhost {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.consoleHint {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pill {
+  font-size: 11px;
+  color: var(--ui-text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  background: rgba(10, 18, 30, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--ui-text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
+  /* =========================================================
+   [RAD-00] Radius-Steuerung (Zeile 2 in der Konsole)
+   → Diese Zeilen ANS ENDE von style.css anhängen
+========================================================= */
+
+.consoleRadius {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  border-top: 1px solid var(--ui-line);
+  padding-top: 8px;
+}
+
+/* Dropdown: System als Zentrum */
+.consoleSelect {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--ui-text);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  /* Kleiner Pfeil rechts */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.consoleSelect:hover {
+  border-color: rgba(120, 190, 255, 0.55);
+}
+.consoleSelect option {
+  background: #0a121e;
+  color: var(--ui-text);
+}
+
+/* Slider */
+.consoleSlider {
+  width: 110px;
+  flex-shrink: 0;
+  accent-color: rgba(120, 190, 255, 0.9);
+  cursor: pointer;
+}
+
+/* Radius-Anzeige */
+.consolePill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ui-accent);
+  white-space: nowrap;
+  min-width: 38px;
+  text-align: right;
+  letter-spacing: 0.04em;
+}
+
+}

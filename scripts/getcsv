@@ -1,0 +1,414 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
+
+BASE = "https://spansh.co.uk"
+DEFAULT_REF = (-341.0, -84.0, 35.03)
+
+GUID_RE = re.compile(r"^[0-9A-Fa-f-]{36}$")
+
+
+# -----------------------------
+# API client
+# -----------------------------
+class Spansh:
+    def __init__(self, base: str = BASE):
+        self.base = base.rstrip("/")
+        self.s = requests.Session()
+        self.s.headers.update({"User-Agent": "spansh-cli/0.1"})
+
+    def get(self, path: str, params: Optional[dict] = None) -> dict:
+        r = self.s.get(self.base + path, params=params, timeout=60)
+        r.raise_for_status()
+        return r.json()
+
+    def post(self, path: str, payload: dict) -> dict:
+        r = self.s.post(self.base + path, json=payload, timeout=60)
+        r.raise_for_status()
+        return r.json()
+
+    # endpoints seen in your JS snippet
+    def searchable_fields(self, entity: str = "systems") -> dict:
+        return self.get(f"/api/{entity}/searchable_fields")
+
+    def sortable_fields(self, entity: str = "systems") -> dict:
+        return self.get(f"/api/{entity}/sortable_fields")
+
+    def field_values(self, entity: str, field: str, q: Optional[str] = None) -> dict:
+        return self.get(f"/api/{entity}/field_values/{field}", params=({"q": q} if q else None))
+
+    def search(self, entity: str, payload: dict) -> dict:
+        return self.post(f"/api/{entity}/search", payload)
+
+    def recall(self, entity: str, guid: str, page0: int = 0) -> dict:
+        # JS: /api/${e}/search/recall/${t}/${n} with page index starting at 0 internally
+        return self.get(f"/api/{entity}/search/recall/{guid}/{page0}")
+
+# -----------------------------
+# Helpers: schema normalization
+# -----------------------------
+@dataclass
+class FieldDef:
+    name: str
+    type: str
+    multiple: bool = False
+    # optional extra metadata (subfields etc.)
+    raw: dict = None
+
+def parse_fields(searchable_fields_json: dict) -> List[FieldDef]:
+    """
+    The exact shape of /searchable_fields may vary.
+    We handle common patterns:
+      - {"fields":[{name,type,...}, ...]}
+      - {"searchable_fields":[...]}
+      - direct list
+    """
+    data = searchable_fields_json
+    items = None
+    if isinstance(data, list):
+        items = data
+    elif isinstance(data.get("fields"), list):
+        items = data["fields"]
+    elif isinstance(data.get("searchable_fields"), list):
+        items = data["searchable_fields"]
+    elif isinstance(data.get("values"), list):  # sometimes used generically
+        items = data["values"]
+
+    if items is None:
+        raise RuntimeError("Unknown /searchable_fields JSON structure. Inspect and adapt parse_fields().")
+
+    out: List[FieldDef] = []
+    for it in items:
+        if not isinstance(it, dict) or "name" not in it or "type" not in it:
+            continue
+        out.append(FieldDef(
+            name=it["name"],
+            type=it["type"],
+            multiple=bool(it.get("multiple", False)),
+            raw=it
+        ))
+    return out
+
+def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
+    if not rows:
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write("")
+        return
+    cols = sorted({k for r in rows for k in r.keys()})
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+
+# -----------------------------
+# Build payload following JS logic
+# -----------------------------
+def build_filters_payload(fields: List[FieldDef], args: argparse.Namespace) -> Dict[str, Any]:
+    """
+    We do NOT try to replicate every JS helper here (numeric/boolean/group/etc.)
+    by guessing field names.
+    Instead we implement the payload format that your snippet shows:
+
+    - simple/group/autocomplete: { "<field>": {"value": ...} }
+    - numeric-range (integer-range / real-range): { "<field>": {"comparison":"<=>","value":[min,max]} }
+    - boolean: null => ignore; -1 => {} ; else {"value": v}
+    - timestamp: {"comparison":"<=>","value":[min,max]}
+    - distance: {"min": a, "max": b}
+    - coordinates handled separately as reference_coords
+    """
+    filters: Dict[str, Any] = {}
+
+    for f in fields:
+        enabled = getattr(args, f"en__{f.name}", "y")
+        if enabled != "y":
+            continue
+
+        # each field gets a value argument slot depending on type
+        if f.type in ("string", "autocomplete", "group"):
+            v = getattr(args, f"v__{f.name}", None)
+            if v is None:
+                continue
+            # multiple selection allowed => list
+            if f.multiple and isinstance(v, str):
+                v = [v]
+            filters[f.name] = {"value": v}
+
+        elif f.type in ("integer-range", "real-range"):
+            mn = getattr(args, f"min__{f.name}", None)
+            mx = getattr(args, f"max__{f.name}", None)
+            if mn is None and mx is None:
+                continue
+            # require both ends? JS expects array of length 2; we fill missing with None.
+            filters[f.name] = {"comparison": "<=>", "value": [mn, mx]}
+
+        elif f.type == "boolean":
+            bv = getattr(args, f"b__{f.name}", None)
+            if bv is None:
+                continue
+            # JS: -1 => {} ; else {value: r}
+            if bv == -1:
+                filters[f.name] = {}
+            else:
+                filters[f.name] = {"value": bv}
+
+        elif f.type == "timestamp":
+            t0 = getattr(args, f"t0__{f.name}", None)
+            t1 = getattr(args, f"t1__{f.name}", None)
+            if t0 is None and t1 is None:
+                continue
+            filters[f.name] = {"comparison": "<=>", "value": [t0, t1]}
+
+        elif f.type == "distance-to-arrival" or f.type == "distance":
+            d0 = getattr(args, f"dmin__{f.name}", None)
+            d1 = getattr(args, f"dmax__{f.name}", None)
+            if d0 is None and d1 is None:
+                continue
+            filters[f.name] = {"min": d0, "max": d1}
+
+        else:
+            # other types exist (combined, value_struct, route, market, belts/rings)
+            # To be exact for those, we need their field.raw schema (subFields/valueField etc.).
+            # We still allow passing raw JSON via --raw-<field>.
+            raw_json = getattr(args, f"raw__{f.name}", None)
+            if raw_json is not None:
+                filters[f.name] = json.loads(raw_json)
+
+    return filters
+
+def build_search_payload(
+    fields: List[FieldDef],
+    args: argparse.Namespace,
+    reference_coords: Tuple[float, float, float],
+) -> Dict[str, Any]:
+    filters = build_filters_payload(fields, args)
+
+    payload: Dict[str, Any] = {
+        "filters": filters,
+        "sort": [],              # keep empty; you can extend via /sortable_fields
+        "size": args.size,
+        "page": args.page - 1,   # JS uses page-1
+        "reference_coords": {"x": reference_coords[0], "y": reference_coords[1], "z": reference_coords[2]},
+    }
+    return payload
+
+# -----------------------------
+# Dynamic argparse generation
+# -----------------------------
+def add_field_args(parser: argparse.ArgumentParser, fields: List[FieldDef]) -> None:
+    """
+    For each field, add:
+      --en-<field> y|n  (default y)
+      and value flags depending on type.
+    """
+    for f in fields:
+        safe = f.name.replace(".", "__")  # keep argparse attribute valid
+        # enable/disable
+        parser.add_argument(f"--en-{f.name}", dest=f"en__{f.name}", choices=["y", "n"], default="y",
+                            help=f"Enable filter {f.name} (type={f.type})")
+
+        if f.type in ("string", "autocomplete", "group"):
+            # allow multi via repeat
+            parser.add_argument(f"--{f.name}", dest=f"v__{f.name}", nargs="+", default=None,
+                                help=f"Value(s) for {f.name}")
+
+        elif f.type in ("integer-range", "real-range"):
+            parser.add_argument(f"--{f.name}-min", dest=f"min__{f.name}", type=float, default=None)
+            parser.add_argument(f"--{f.name}-max", dest=f"max__{f.name}", type=float, default=None)
+
+        elif f.type == "boolean":
+            parser.add_argument(f"--{f.name}", dest=f"b__{f.name}", type=int, choices=[-1, 0, 1], default=None,
+                                help="Boolean: 1=true, 0=false, -1=unknown (maps to {})")
+
+        elif f.type == "timestamp":
+            parser.add_argument(f"--{f.name}-from", dest=f"t0__{f.name}", type=str, default=None,
+                                help="Timestamp start (string as expected by Spansh API)")
+            parser.add_argument(f"--{f.name}-to", dest=f"t1__{f.name}", type=str, default=None,
+                                help="Timestamp end (string as expected by Spansh API)")
+
+        elif f.type in ("distance", "distance-to-arrival"):
+            parser.add_argument(f"--{f.name}-min", dest=f"dmin__{f.name}", type=float, default=None)
+            parser.add_argument(f"--{f.name}-max", dest=f"dmax__{f.name}", type=float, default=None)
+
+        else:
+            # fallback for complex types: allow raw JSON
+            parser.add_argument(f"--raw-{f.name}", dest=f"raw__{f.name}", type=str, default=None,
+                                help=f"Raw JSON for complex filter type '{f.type}'")
+
+# -----------------------------
+# Commands
+# -----------------------------
+def cmd_filters(api: Spansh, args: argparse.Namespace) -> int:
+    data = api.searchable_fields("systems")
+    fields = parse_fields(data)
+
+    rows = [{"name": f.name, "type": f.type, "multiple": f.multiple} for f in fields]
+    if args.out.endswith(".json"):
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(rows, f, indent=2)
+    else:
+        write_csv(args.out, rows)
+    print(f"Wrote {len(rows)} searchable fields to {args.out}")
+    return 0
+
+def cmd_values(api: Spansh, args: argparse.Namespace) -> int:
+    data = api.searchable_fields("systems")
+    fields = parse_fields(data)
+
+    out: Dict[str, Any] = {}
+    for f in fields:
+        enabled = getattr(args, f"en__{f.name}", "y")
+        if enabled != "y":
+            continue
+        try:
+            vals = api.field_values("systems", f.name, q=args.q)
+            # common: {"values":[...]} or {"values":{group:[...]}} etc.
+            out[f.name] = vals
+            if args.sleep:
+                time.sleep(args.sleep)
+        except Exception as exc:
+            out[f.name] = {"error": str(exc)}
+
+    with open(args.out, "w", encoding="utf-8") as fp:
+        json.dump(out, fp, indent=2)
+    print(f"Wrote field_values for {len(out)} fields to {args.out}")
+    return 0
+
+def cmd_search(api: Spansh, args: argparse.Namespace) -> int:
+    fields_json = api.searchable_fields("systems")
+    fields = parse_fields(fields_json)
+
+    ref = (args.ref_x, args.ref_y, args.ref_z)
+
+    payload = build_search_payload(fields, args, ref)
+    resp = api.search("systems", payload)
+
+    # Heuristic: response might contain a GUID directly or nested.
+    guid = None
+    if isinstance(resp, dict):
+        for k in ("guid", "id", "search_id", "searchId", "token"):
+            if k in resp and isinstance(resp[k], str) and GUID_RE.match(resp[k]):
+                guid = resp[k]
+                break
+        if guid is None:
+            # sometimes response is {"recall":"<GUID>"} etc.
+            for v in resp.values():
+                if isinstance(v, str) and GUID_RE.match(v):
+                    guid = v
+                    break
+
+    if guid is None:
+        # Save response for inspection
+        with open(args.debug_json, "w", encoding="utf-8") as f:
+            json.dump(resp, f, indent=2)
+        raise RuntimeError(f"Search response did not contain a GUID. Saved to {args.debug_json}")
+
+    # recall pages to rows
+    rows: List[Dict[str, Any]] = []
+    for page0 in range(args.max_pages):
+        page = api.recall("systems", guid, page0=page0)
+        # guess where results are
+        items = None
+        for key in ("results", "data", "systems", "items"):
+            if isinstance(page.get(key), list):
+                items = page[key]
+                break
+        if not items:
+            break
+        rows.extend(items)
+        if args.sleep:
+            time.sleep(args.sleep)
+
+    # flatten minimal columns for CSV output
+    out_rows: List[Dict[str, Any]] = []
+    for s in rows:
+        coords = (s.get("coords") or {})
+        out_rows.append({
+            "name": s.get("name"),
+            "x": coords.get("x"),
+            "y": coords.get("y"),
+            "z": coords.get("z"),
+            "population": s.get("population"),
+            "allegiance": s.get("allegiance"),
+            "security": s.get("security"),
+            "government": s.get("government"),
+            "economy": s.get("economy") or s.get("primary_economy"),
+            "id64": s.get("id64") or s.get("systemAddress") or s.get("system_address"),
+        })
+
+    write_csv(args.out, out_rows)
+    print(f"GUID={guid} | Wrote {len(out_rows)} rows to {args.out}")
+    return 0
+
+
+# -----------------------------
+# Main: 2-pass parse (dynamic flags)
+# -----------------------------
+def build_base_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="spansh", description="Spansh dynamic CLI from /searchable_fields")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    p_filters = sub.add_parser("filters", help="Export /api/systems/searchable_fields")
+    p_filters.add_argument("--out", required=True, help="CSV or JSON")
+
+    p_values = sub.add_parser("values", help="Fetch /api/systems/field_values/<field> for ALL fields (default en=y)")
+    p_values.add_argument("--out", required=True, help="JSON output")
+    p_values.add_argument("--q", default=None, help="Optional query prefix for field_values?q=")
+    p_values.add_argument("--sleep", type=float, default=0.0)
+
+    p_search = sub.add_parser("search", help="POST /api/systems/search then recall pages, export CSV")
+    p_search.add_argument("--out", required=True, help="CSV output")
+    p_search.add_argument("--ref-x", type=float, default=DEFAULT_REF[0])
+    p_search.add_argument("--ref-y", type=float, default=DEFAULT_REF[1])
+    p_search.add_argument("--ref-z", type=float, default=DEFAULT_REF[2])
+    p_search.add_argument("--size", type=int, default=100)
+    p_search.add_argument("--page", type=int, default=1)
+    p_search.add_argument("--max-pages", type=int, default=50)
+    p_search.add_argument("--sleep", type=float, default=0.2)
+    p_search.add_argument("--debug-json", default="search_response_debug.json")
+
+    return p
+
+def main(argv: Optional[List[str]] = None) -> int:
+    api = Spansh()
+
+    # 1st pass: parse only command + basic args
+    base = build_base_parser()
+    args1, unknown = base.parse_known_args(argv)
+
+    # Load fields once for dynamic args (only when needed)
+    if args1.cmd in ("values", "search"):
+        fields = parse_fields(api.searchable_fields("systems"))
+
+        # rebuild parser with dynamic args for that subcommand
+        p = build_base_parser()
+        # attach dynamic args to specific subparser:
+        # easiest: add to whole parser, because argparse doesn’t expose subparser objects cleanly after the fact.
+        add_field_args(p, fields)
+
+        args = p.parse_args(argv)
+
+        if args.cmd == "values":
+            return cmd_values(api, args)
+        if args.cmd == "search":
+            return cmd_search(api, args)
+
+    # no dynamic fields needed
+    args = base.parse_args(argv)
+    if args.cmd == "filters":
+        return cmd_filters(api, args)
+
+    return 2
+
+if __name__ == "__main__":
+    raise SystemExit(main())
