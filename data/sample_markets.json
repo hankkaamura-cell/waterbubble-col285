@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-05-26T00:00:00Z",
+  "source": "manual sample data",
+  "stations": [
+    {
+      "systemName": "Col 285 Sector KQ-S b18-0",
+      "stationName": "Example Export Port",
+      "marketId": 100000001,
+      "stationType": "Coriolis",
+      "maxPadSize": "L",
+      "distanceToArrivalLs": 420,
+      "updatedAt": "2026-05-26T00:00:00Z",
+      "commodities": [
+        {
+          "name": "Aluminium",
+          "buyPrice": 1100,
+          "sellPrice": 950,
+          "supply": 8000,
+          "demand": 0
+        },
+        {
+          "name": "CMM Composite",
+          "buyPrice": 4300,
+          "sellPrice": 3900,
+          "supply": 2200,
+          "demand": 0
+        },
+        {
+          "name": "Polymers",
+          "buyPrice": 220,
+          "sellPrice": 180,
+          "supply": 9000,
+          "demand": 0
+        }
+      ]
+    },
+    {
+      "systemName": "Col 285 Sector KQ-S b18-3",
+      "stationName": "Example Import Port",
+      "marketId": 100000002,
+      "stationType": "Ocellus",
+      "maxPadSize": "L",
+      "distanceToArrivalLs": 900,
+      "updatedAt": "2026-05-26T00:00:00Z",
+      "commodities": [
+        {
+          "name": "Aluminium",
+          "buyPrice": 3600,
+          "sellPrice": 3500,
+          "supply": 0,
+          "demand": 5000
+        },
+        {
+          "name": "CMM Composite",
+          "buyPrice": 8400,
+          "sellPrice": 8300,
+          "supply": 0,
+          "demand": 1400
+        },
+        {
+          "name": "Polymers",
+          "buyPrice": 920,
+          "sellPrice": 880,
+          "supply": 0,
+          "demand": 6000
+        }
+      ]
+    }
+  ]
+}
