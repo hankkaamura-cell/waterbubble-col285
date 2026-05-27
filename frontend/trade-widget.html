@@ -1,0 +1,59 @@
+<!--
+Optional trade-loop table widget.
+Drop this somewhere in the prototype after adding frontend/waterbubble-client.js.
+-->
+
+<section id="tradePanel" class="panel">
+  <div class="ptitle">Trade Loops</div>
+
+  <div class="psec">
+    <label>
+      Cargo:
+      <input id="tradeCargo" type="number" min="1" value="784">
+    </label>
+    <label>
+      Pad:
+      <select id="tradePad">
+        <option value="L" selected>L</option>
+        <option value="M">M</option>
+        <option value="S">S</option>
+      </select>
+    </label>
+    <label>
+      Max age:
+      <input id="tradeAge" type="number" min="1" value="48"> hr
+    </label>
+    <button id="tradeRefresh" class="btn">Find Loops</button>
+  </div>
+
+  <div class="psec" style="overflow:auto; max-height:240px;">
+    <table style="width:100%; font-size:11px;">
+      <thead>
+        <tr>
+          <th>Commodity</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Buy</th>
+          <th>Sell</th>
+          <th>Profit/t</th>
+          <th>Tons</th>
+          <th>Est.</th>
+        </tr>
+      </thead>
+      <tbody id="tradeRows"></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+document.getElementById("tradeRefresh").addEventListener("click", async () => {
+  const loops = await WaterBubbleAPI.getTradeLoops({
+    cargoCapacity: Number(document.getElementById("tradeCargo").value || 784),
+    requiredPad: document.getElementById("tradePad").value,
+    maxAgeHours: Number(document.getElementById("tradeAge").value || 48),
+    colonizationOnly: true,
+  });
+
+  WaterBubbleAPI.renderTradeLoopsIntoTable(document.getElementById("tradeRows"), loops);
+});
+</script>
