@@ -126,10 +126,10 @@ The system detail view is where data becomes history, and history becomes motiva
 | Radius filter with dropdown | ✅ Working |
 | Live Spansh connection (local proxy) | ✅ Working |
 | FastAPI backend (FraggertheBoss) | ✅ Working |
-| EDDN live market listener | ✅ Working |
-| Trade route calculator (sample data) | ✅ Working |
-| System status model (7 states) | ✅ Working |
-| System roles | ✅ Working |
+| EDDN live market listener | ⚠️ Built, untested (needs live CMDR data) |
+| Trade route calculator (sample data) | ⚠️ Built, pad size bug (trade loops return empty) |
+| System status model (7 states) | ✅ Working (frontend only, not yet from backend) |
+| System roles | ✅ Working (frontend only, not yet from backend) |
 | Standalone HTML version | ✅ Working |
 | Group config system | ❌ Not built |
 | CMDR login / access control | ❌ Not built |
