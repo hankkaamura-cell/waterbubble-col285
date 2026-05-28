@@ -932,8 +932,13 @@ async function bootstrap() {
   buildRadiusControl();
   resizeToSlot();
 
-  // CSV laden
-  const initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+  // Systeme vom Backend laden (falls verfügbar), sonst CSV als Fallback
+  let initialSystems;
+  try {
+    initialSystems = await WaterBubbleAPI.bootstrapWaterBubbleData();
+  } catch {
+    initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+  }
   applySystems(initialSystems);
 
   tick();
@@ -992,8 +997,13 @@ async function bootstrap() {
   buildRadiusControl();        // [RAD-03] Radius-Control aktivieren
   resizeToSlot();
 
-  // CSV laden
-  const initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+// Systeme vom Backend laden (falls verfügbar), sonst CSV als Fallback
+  let initialSystems;
+  try {
+    initialSystems = await WaterBubbleAPI.bootstrapWaterBubbleData();
+  } catch {
+    initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+  }
   applySystems(initialSystems);
 
   tick();
