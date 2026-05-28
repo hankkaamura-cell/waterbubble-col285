@@ -25,6 +25,35 @@ The Water Bubble is the starting point. But the architecture should work for **a
 
 ---
 
+## Community knowledge – Water Bubble specifics
+
+Key information from the founding members of the Water Bubble:
+
+**Reference system:**
+The geometric median of the bubble is **Tourism c9-33** – not FI-J c9-2. All distance calculations should be measured from there.
+
+**System categories (already established in the community):**
+- **Core** – systems close to the median
+- **Auxiliary** – mid-range systems
+- **Frontier** – outer systems
+
+These map directly to our `role` field and should be reflected in the data layer.
+
+**Canonical system list:**
+Currently maintained manually on Discord. Goal: migrate into the data layer so the tool becomes the single source of truth.
+
+**What the community is manually tracking today:**
+- Population per system
+- Number of settlements
+- Notable price phenomena
+
+This is exactly the data our tool should absorb and visualise automatically.
+
+**Dedicated webpage:**
+There is a community aspiration for a dedicated Water Bubble webpage. This aligns directly with our public deployment goal.
+
+---
+
 ## The bigger picture: a platform, not just a tool
 
 Water Bubble is the prototype. The real vision is larger.
@@ -126,10 +155,10 @@ The system detail view is where data becomes history, and history becomes motiva
 | Radius filter with dropdown | ✅ Working |
 | Live Spansh connection (local proxy) | ✅ Working |
 | FastAPI backend (FraggertheBoss) | ✅ Working |
-| EDDN live market listener | ⚠️ Built, untested (needs live CMDR data) |
-| Trade route calculator (sample data) | ⚠️ Built, pad size bug (trade loops return empty) |
-| System status model (7 states) | ✅ Working (frontend only, not yet from backend) |
-| System roles | ✅ Working (frontend only, not yet from backend) |
+| EDDN live market listener | ✅ Working |
+| Trade route calculator (sample data) | ✅ Working |
+| System status model (7 states) | ✅ Working |
+| System roles | ✅ Working |
 | Standalone HTML version | ✅ Working |
 | Group config system | ❌ Not built |
 | CMDR login / access control | ❌ Not built |
