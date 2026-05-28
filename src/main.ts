@@ -2,6 +2,7 @@ import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { computeGlobalStats, loadSystemsFromCsv, type SystemRecord } from "./systems";
+declare const WaterBubbleAPI: any;
 
 // =========================================================
 // [CFG-01] Tuning constants (hier darfst du drehen)
@@ -547,7 +548,6 @@ function buildGraph() {
   const pts = systems.map((s) => new THREE.Vector3(s.x, s.y, s.z));
 
   nodes = systems.map((sys, i) => {
-    const k = economyKeyOf(sys);
     const econK = economyKeyOf(sys);
 const planetK = planetKeyOf(sys);
 
@@ -920,31 +920,6 @@ function createSpanshButton() {
     await fetchFromSpansh(SPANSH_DEFAULT_REFERENCE, SPANSH_DEFAULT_RADIUS, shouldExport, btn);
   });
 
-
-// =========================================================
-// ÄNDERUNG 4 – Radius-Control verdrahten + Dropdown befüllen
-// Suche nach:
-// =========================================================
-
-async function bootstrap() {
-  createSpanshButton();
-  buildEconomyList();
-  buildRadiusControl();
-  resizeToSlot();
-
-  // Systeme vom Backend laden (falls verfügbar), sonst CSV als Fallback
-  let initialSystems;
-  try {
-    initialSystems = await WaterBubbleAPI.bootstrapWaterBubbleData();
-  } catch {
-    initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
-  }
-  applySystems(initialSystems);
-
-  tick();
-}
-
-// Ersetze mit:
 
 // [RAD-02] Dropdown mit Systemnamen befüllen
 function populateCenterDropdown(loadedSystems: SystemRecord[]) {
