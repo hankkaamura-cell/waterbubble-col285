@@ -40,6 +40,15 @@ def import_markets_json(path: str | Path, source: str = "spansh_or_manual") -> i
     stations = data.get("stations", data if isinstance(data, list) else [])
     count = 0
     for station in stations:
-        upsert_market_station(station, source=source)
+        station_payload = dict(station)
+
+        # Sample market data is included for demos/local testing. Treat it as fresh
+        # on startup so the default /api/trade-loops freshness window does not
+        # make the backend look empty or broken a few days after packaging.
+        if str(source).lower() == "sample":
+            station_payload.pop("updatedAt", None)
+            station_payload.pop("updated_at", None)
+
+        upsert_market_station(station_payload, source=source)
         count += 1
     return count

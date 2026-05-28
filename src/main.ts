@@ -2,7 +2,6 @@ import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { computeGlobalStats, loadSystemsFromCsv, type SystemRecord } from "./systems";
-declare const WaterBubbleAPI: any;
 
 // =========================================================
 // [CFG-01] Tuning constants (hier darfst du drehen)
@@ -298,12 +297,10 @@ type SpanshSystemsResponse = {
 // =========================================================
 const SPANSH_PROXY_BASE = "http://localhost:8787";
 const SPANSH_DEFAULT_REFERENCE = "Col 285 Sector FI-J c9-2";
-const SPANSH_REFERENCE_COORDS = {
-  x: -341.15625,
-  y: -83.84375,
-  z: 35.03125,
-};
 const SPANSH_DEFAULT_RADIUS = 75;
+const WATERBUBBLE_API_BASE = (
+  (window as unknown as { WATERBUBBLE_API_BASE?: string }).WATERBUBBLE_API_BASE ?? "http://localhost:8000"
+).replace(/\/$/, "");
 
 
 // =========================================================
@@ -781,6 +778,111 @@ function showProxyError(message: string) {
   statsRows.innerHTML = `<div style="padding:10px;color:rgba(255,255,255,0.8)">${message}</div>`;
 }
 
+
+type BackendSystemRecord = {
+  name?: unknown;
+  n?: unknown;
+  x?: unknown;
+  y?: unknown;
+  z?: unknown;
+  economy?: unknown;
+  ec?: unknown;
+  colonised?: unknown;
+  col?: unknown;
+  faction?: unknown;
+  fac?: unknown;
+  allegiance?: unknown;
+  al?: unknown;
+  factionState?: unknown;
+  faction_state?: unknown;
+  fs?: unknown;
+  planetClass?: unknown;
+  planet_class?: unknown;
+  pc?: unknown;
+  bodies?: unknown;
+  body_count?: unknown;
+  bo?: unknown;
+  stations?: unknown;
+  station_count?: unknown;
+  st?: unknown;
+};
+
+function valueToNumber(value: unknown): number | undefined {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function valueToBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["true", "yes", "1"].includes(text)) return true;
+  if (["false", "no", "0"].includes(text)) return false;
+  return undefined;
+}
+
+function valueToString(value: unknown): string | undefined {
+  const text = String(value ?? "").trim();
+  return text ? text : undefined;
+}
+
+function normalizeBackendSystem(row: BackendSystemRecord): SystemRecord | null {
+  const name = valueToString(row.name ?? row.n);
+  const x = valueToNumber(row.x);
+  const y = valueToNumber(row.y);
+  const z = valueToNumber(row.z);
+
+  if (!name || x === undefined || y === undefined || z === undefined) return null;
+
+  return {
+    name,
+    x,
+    y,
+    z,
+    economy: valueToString(row.economy ?? row.ec),
+    colonised: valueToBoolean(row.colonised ?? row.col),
+    faction: valueToString(row.faction ?? row.fac),
+    allegiance: valueToString(row.allegiance ?? row.al),
+    factionState: valueToString(row.factionState ?? row.faction_state ?? row.fs),
+    planetClass: valueToString(row.planetClass ?? row.planet_class ?? row.pc) as SystemRecord["planetClass"],
+    bodies: valueToNumber(row.bodies ?? row.body_count ?? row.bo) ?? 0,
+    stations: valueToNumber(row.stations ?? row.station_count ?? row.st) ?? 0,
+  };
+}
+
+async function loadSystemsFromBackend(): Promise<SystemRecord[]> {
+  const response = await fetch(`${WATERBUBBLE_API_BASE}/api/systems`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Backend system load failed: ${response.status} ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new Error("Backend system load failed: /api/systems did not return an array");
+  }
+
+  return payload
+    .map((row: BackendSystemRecord) => normalizeBackendSystem(row))
+    .filter((system): system is SystemRecord => system !== null);
+}
+
+async function loadInitialSystems(): Promise<SystemRecord[]> {
+  try {
+    const backendSystems = await loadSystemsFromBackend();
+    if (backendSystems.length > 0) {
+      console.info(`[WaterBubble] Loaded ${backendSystems.length} systems from backend API`);
+      return backendSystems;
+    }
+    console.warn("[WaterBubble] Backend returned zero systems; falling back to static CSV");
+  } catch (error) {
+    console.warn("[WaterBubble] Backend unavailable; falling back to static CSV", error);
+  }
+
+  const csvSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+  console.info(`[WaterBubble] Loaded ${csvSystems.length} systems from static CSV fallback`);
+  return csvSystems;
+}
+
 // [RAD-01] Wiederverwendbare Fetch-Funktion (für SPANSH-Button + APPLY-Button)
 async function fetchFromSpansh(
   reference: string,
@@ -793,9 +895,6 @@ async function fetchFromSpansh(
   triggerBtn.textContent = "LOADING...";
 
   const params = new URLSearchParams({ reference, radius: String(radiusLy) });
-  params.set("x", String(SPANSH_REFERENCE_COORDS.x));
-  params.set("y", String(SPANSH_REFERENCE_COORDS.y));
-  params.set("z", String(SPANSH_REFERENCE_COORDS.z));
 
   if (shouldExport) {
     const outputName = window.prompt(
@@ -920,69 +1019,6 @@ function createSpanshButton() {
     await fetchFromSpansh(SPANSH_DEFAULT_REFERENCE, SPANSH_DEFAULT_RADIUS, shouldExport, btn);
   });
 
-
-// [RAD-02] Dropdown mit Systemnamen befüllen
-function populateCenterDropdown(loadedSystems: SystemRecord[]) {
-  const current = selectCenter.value;
-  selectCenter.innerHTML = "";
-
-  // Default-System immer an erster Stelle
-  const defaultOpt = document.createElement("option");
-  defaultOpt.value = SPANSH_DEFAULT_REFERENCE;
-  defaultOpt.textContent = SPANSH_DEFAULT_REFERENCE;
-  selectCenter.appendChild(defaultOpt);
-
-  // Alle anderen Systeme alphabetisch
-  const others = loadedSystems
-    .map((s) => s.name)
-    .filter((n) => n !== SPANSH_DEFAULT_REFERENCE)
-    .sort();
-
-  for (const name of others) {
-    const opt = document.createElement("option");
-    opt.value = name;
-    opt.textContent = name;
-    selectCenter.appendChild(opt);
-  }
-
-  // Bisherige Auswahl beibehalten wenn noch vorhanden
-  if ([...selectCenter.options].some((o) => o.value === current)) {
-    selectCenter.value = current;
-  }
-}
-
-// [RAD-03] Slider + Apply-Button verdrahten
-function buildRadiusControl() {
-  // Slider: Label live aktualisieren
-  sliderRadius.addEventListener("input", () => {
-    labelRadius.textContent = `${sliderRadius.value} ly`;
-  });
-
-  // Apply-Button: Spansh mit gewähltem Zentrum + Radius abfragen
-  btnApplyRadius.addEventListener("click", async () => {
-    const reference = selectCenter.value || SPANSH_DEFAULT_REFERENCE;
-    const radius    = Math.min(75, Math.max(1, Number(sliderRadius.value)));
-    await fetchFromSpansh(reference, radius, false, btnApplyRadius);
-  });
-}
-
-async function bootstrap() {
-  createSpanshButton();
-  buildEconomyList();
-  buildRadiusControl();        // [RAD-03] Radius-Control aktivieren
-  resizeToSlot();
-
-// Systeme vom Backend laden (falls verfügbar), sonst CSV als Fallback
-  let initialSystems;
-  try {
-    initialSystems = await WaterBubbleAPI.bootstrapWaterBubbleData();
-  } catch {
-    initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
-  }
-  applySystems(initialSystems);
-
-  tick();
-}
 
   consoleButtons.appendChild(btn);
   enableButtonWhenProxyReady(btn);
@@ -1131,22 +1167,6 @@ function renderStats() {
   }
 }
 
-// helper used above
-function addRow(k: string, v: string) {
-  const row = document.createElement("div");
-  row.className = "statsRow";
-  const kk = document.createElement("div");
-  kk.className = "statsKey";
-  kk.textContent = k;
-
-  const vv = document.createElement("div");
-  vv.className = "statsVal";
-  vv.textContent = v;
-
-  row.appendChild(kk);
-  row.appendChild(vv);
-  statsRows.appendChild(row);
-}
 
 // =========================================================
 // [MK-03] Marker pixel-size stabilization (Zoom feel)
@@ -1191,8 +1211,7 @@ async function bootstrap() {
   buildRadiusControl();
   resizeToSlot();
 
-  // CSV laden
-  const initialSystems = await loadSystemsFromCsv("/systems-search-Waterbubble.csv");
+  const initialSystems = await loadInitialSystems();
   applySystems(initialSystems);
 
   tick();
@@ -1201,7 +1220,7 @@ async function bootstrap() {
 bootstrap().catch((e) => {
   console.error(e);
   statsTitle.textContent = "ERROR";
-  statsRows.innerHTML = `<div style="padding:10px;color:rgba(255,255,255,0.8)">CSV load failed: ${String(
+  statsRows.innerHTML = `<div style="padding:10px;color:rgba(255,255,255,0.8)">Initial data load failed: ${String(
     (e as Error).message ?? e
   )}</div>`;
 });
