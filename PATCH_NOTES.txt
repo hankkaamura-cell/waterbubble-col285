@@ -1,0 +1,100 @@
+Water Bubble / Col 285 — Targeted Patch Notes
+Prepared for Skye/Kanaan
+
+Scope rule:
+This patch only includes files tied directly to the confirmed fixes. It does not add METIS, EPIRB, or any unrelated module. It does not ship a rebuilt full project.
+
+Files included:
+1. src/main.ts
+2. index.html
+3. backend/app/spansh_client.py
+4. package.json
+5. package-lock.json
+
+Fixes included:
+
+PROBLEM: CRITICAL
+Radius / center-system selection was being overridden by hardcoded coordinates.
+
+Resolution:
+- Removed hardcoded x/y/z from the Spansh request builder in src/main.ts.
+- Requests now send reference=<selected system> and radius=<selected radius> only.
+- This lets the proxy use the selected system as the actual Spansh radius center.
+
+Outcome:
+- APPLY should now query around the selected system rather than silently using the default hardcoded coordinate anchor.
+
+------------------------------------------------------------
+
+PROBLEM: CRITICAL
+Backend/live-data startup path was not cleanly wired.
+
+Resolution:
+- Removed dependency on the external /frontend/waterbubble-client.js script from index.html.
+- Added a direct frontend startup loader in src/main.ts.
+- Startup now tries http://localhost:8000/api/systems first.
+- If backend data is unavailable or returns zero systems, it falls back to /systems-search-Waterbubble.csv.
+- Backend system rows are normalized into the SystemRecord shape used by the map.
+
+Outcome:
+- Frontend now has a clear data-source order: backend first, static CSV fallback second.
+- Production preview no longer points at a missing /frontend/waterbubble-client.js script.
+
+------------------------------------------------------------
+
+PROBLEM: MODERATE
+Trade-loop endpoint could look empty because sample data aged out of the 48-hour freshness window.
+
+Resolution:
+- Updated backend/app/spansh_client.py so sample market data imported with source="sample" is treated as fresh on backend startup.
+- This preserves the 48-hour default freshness window for real/live market data.
+
+Outcome:
+- /api/trade-loops now returns the included demo/sample trade loops during local development instead of returning [] because the packaged sample timestamps got old.
+
+------------------------------------------------------------
+
+PROBLEM: MODERATE
+NPM audit vulnerabilities remained in the lockfile/tooling.
+
+Resolution:
+- Ran npm audit fix --package-lock-only.
+- package-lock.json was updated.
+- package.json includes @types/three, which is required for clean TypeScript builds.
+
+Outcome:
+- npm audit now reports 0 vulnerabilities in this patched working copy.
+- npm run build passes.
+
+Verification performed:
+- npm run build: PASS
+- npm audit --omit=optional --audit-level=moderate: PASS, 0 vulnerabilities
+- python -m compileall app: PASS
+- FastAPI /api/health: PASS
+- FastAPI /api/systems: PASS, 50 systems
+- FastAPI /api/trade-loops: PASS, 3 sample trade loops
+
+Not included / not touched:
+- CSV export/download path bug, because Skye already reported it separately.
+- .git copy/ cleanup, because that is packaging hygiene and not part of this targeted runtime patch.
+- Large Vite bundle warning, because it is not a functional blocker.
+- METIS, EPIRB, INIT, S.A.F.E., or any future module.
+
+Install instruction:
+Copy the files in this patch folder into the matching paths of the existing repo and allow overwrite when prompted.
+
+After patching, run:
+
+npm install
+npm run build
+
+For backend verification:
+
+cd backend
+python -m compileall app
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+Then test:
+http://127.0.0.1:8000/api/health
+http://127.0.0.1:8000/api/systems
+http://127.0.0.1:8000/api/trade-loops
