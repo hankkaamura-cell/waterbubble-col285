@@ -8,8 +8,6 @@
 
 A personal side project: a browser-based star map for the Water Bubble colonisation initiative in Col 285. Built with TypeScript, Three.js, Python and a lot of AI assistance. The goal was simple – stop updating static images manually and replace them with something alive.
 
-It worked. And then it grew.
-
 ---
 
 ## What this wants to become
@@ -20,6 +18,7 @@ A tool that any Elite Dangerous player can run and use to understand **how a reg
 - Where is the bubble expanding?
 - Where is it most interesting to colonise next?
 - What's being built, what's finished, what's struggling?
+- Where are my mates?
 
 The Water Bubble is the starting point. But the architecture should work for **any cluster, any region, any squadron** in the galaxy.
 
@@ -30,9 +29,9 @@ The Water Bubble is the starting point. But the architecture should work for **a
 Key information from the founding members of the Water Bubble:
 
 **Reference system:**
-The geometric median of the bubble is **Tourism c9-33** – not FI-J c9-2. All distance calculations should be measured from there.
+The geometric median of the bubble is **Tourism c9-33**. All distance calculations should be measured from there.
 
-**System categories (already established in the community):**
+**System categories (already established in the community, range in LY tba):**
 - **Core** – systems close to the median
 - **Auxiliary** – mid-range systems
 - **Frontier** – outer systems
@@ -40,7 +39,7 @@ The geometric median of the bubble is **Tourism c9-33** – not FI-J c9-2. All d
 These map directly to our `role` field and should be reflected in the data layer.
 
 **Canonical system list:**
-Currently maintained manually on Discord. Goal: migrate into the data layer so the tool becomes the single source of truth.
+Currently maintained manually on Discord. Goal: migrate into the data layer so the tool becomes a / the single source of truth.
 
 **What the community is manually tracking today:**
 - Population per system
@@ -50,13 +49,13 @@ Currently maintained manually on Discord. Goal: migrate into the data layer so t
 This is exactly the data our tool should absorb and visualise automatically.
 
 **Dedicated webpage:**
-There is a community aspiration for a dedicated Water Bubble webpage. This aligns directly with our public deployment goal.
+There is a community aspiration for a dedicated Water Bubble webpage.
 
 ---
 
 ## The bigger picture: a platform, not just a tool
 
-Water Bubble is the prototype. The real vision is larger.
+Water Bubble is the prototype. 
 
 Every organised group of Elite Dangerous players faces the same problems: no shared map, no project history, no way to see what they've collectively built. BGS squadrons, colonisation fleets, exploration groups – they all coordinate in Discord and spreadsheets, with no visual layer that makes their work visible.
 
@@ -87,7 +86,7 @@ This shapes every UX and UI decision from here on.
 
 ### 🔴 The Console Frame
 - No longer static – lights blink, indicators pulse
-- The fish moves
+- The fish moves 🐟
 - Ambient sound design (optional): the hum of a space station, notification tones
 - The UI feels like you're sitting at a terminal inside the game
 
