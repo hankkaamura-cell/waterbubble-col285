@@ -1,0 +1,9 @@
+{
+  "commander_name": "Tsumikaze",
+  "system_name": "Col 285 Sector FI-J c9-12",
+  "station_name": null,
+  "ship_type": "Type-9 Heavy",
+  "source_detail": "Example local API bridge response",
+  "observed_at": "2026-05-28T07:40:00Z",
+  "notes": "Example payload returned by an INARA/EDDN/EDMC/SRV Survey bridge."
+}
