@@ -4,7 +4,7 @@ This is a module-only package.
 
 ## Important
 
-Do not copy these files into the active branch or mount the router until Skye explicitly approves integration.
+Do not copy these files into the active branch or mount the router until Tsumikaze explicitly approves integration.
 
 ## Suggested branch workflow
 

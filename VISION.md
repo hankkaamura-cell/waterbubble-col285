@@ -6,7 +6,7 @@
 
 ## What this started as
 
-A personal side project: a browser-based star map for the Water Bubble colonisation initiative in Col 285. Built with TypeScript, Three.js, Python and a lot of AI assistance. The goal was simple – stop updating static images manually and replace them with something alive.
+A personal side project: a browser-based star map for the Water Bubble colonisation initiative in Col 285. Built with TypeScript, Three.js, and Python. The goal was simple – stop updating static images manually and replace them with something alive.
 
 ---
 
@@ -153,7 +153,7 @@ The system detail view is where data becomes history, and history becomes motiva
 | Economy & status filter | ✅ Working |
 | Radius filter with dropdown | ✅ Working |
 | Live Spansh connection (local proxy) | ✅ Working |
-| FastAPI backend (FraggertheBoss) | ✅ Working |
+| FastAPI backend (Tsumikaze) | ✅ Working |
 | EDDN live market listener | ✅ Working |
 | Trade route calculator (sample data) | ✅ Working |
 | System status model (7 states) | ✅ Working |
@@ -173,7 +173,7 @@ The system detail view is where data becomes history, and history becomes motiva
 ## Technical foundation
 
 - **Frontend:** TypeScript + Three.js (main app) / Vanilla JS (standalone HTML)
-- **Backend:** Python / FastAPI + EDDN listener (FraggertheBoss bootstrap)
+- **Backend:** Python / FastAPI + EDDN listener (Tsumikaze bootstrap)
 - **Data:** Spansh API + EDDN live stream + CSV export
 - **Status model:** `unclaimed → planned → claimed → under_construction → colonized → developed → blocked`
 - **Role model:** `Industrial / Refinery / High Tech / Agriculture / Tourism / Military / Service / Bridge / Strategic`
@@ -182,7 +182,7 @@ The system detail view is where data becomes history, and history becomes motiva
 
 ## How to contribute
 
-The original developer built this with AI assistance and reached the limits of what they could do alone. The foundation is solid and well-commented.
+The project foundation is solid and well-commented, but it needs additional contributors for polish, deployment, long-term maintenance, and feature expansion.
 
 If you want to contribute:
 1. Fork the repository

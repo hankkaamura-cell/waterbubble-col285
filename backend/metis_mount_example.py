@@ -2,7 +2,7 @@
 MANUAL EXAMPLE ONLY. DO NOT COPY INTO main.py WITHOUT PROJECT OWNER APPROVAL.
 
 This file is included only so Kanaan can see the intended mount shape after a new
-branch is created and Skye explicitly approves integration.
+branch is created and Tsumikaze explicitly approves integration.
 """
 
 from fastapi import FastAPI

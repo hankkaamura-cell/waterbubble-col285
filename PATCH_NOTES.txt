@@ -1,5 +1,5 @@
 Water Bubble / Col 285 — Targeted Patch Notes
-Prepared for Skye/Kanaan
+Prepared for Tsumikaze/Kanaan
 
 Scope rule:
 This patch only includes files tied directly to the confirmed fixes. It does not add METIS, EPIRB, or any unrelated module. It does not ship a rebuilt full project.
@@ -75,7 +75,7 @@ Verification performed:
 - FastAPI /api/trade-loops: PASS, 3 sample trade loops
 
 Not included / not touched:
-- CSV export/download path bug, because Skye already reported it separately.
+- CSV export/download path bug, because Tsumikaze already reported it separately.
 - .git copy/ cleanup, because that is packaging hygiene and not part of this targeted runtime patch.
 - Large Vite bundle warning, because it is not a functional blocker.
 - METIS, EPIRB, INIT, S.A.F.E., or any future module.

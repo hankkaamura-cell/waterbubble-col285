@@ -7,11 +7,11 @@
   1) Token im Code
   2) Abschnitt hier im Wiki
 
-  ## 0.1 Wie arbeite ich mit ChatGPT + Code (Laien-Modus)
-1) Ich beschreibe das Problem in einem Satz + Screenshot
-2) ChatGPT nennt mir: **Datei**, **Token**, **genaue Änderung**
-3) Ich ändere nur diesen Teil und teste (`npm run dev`)
-4) Wenn besser: behalten. Wenn schlechter: Änderung rückgängig
+  ## 0.1 Wie arbeite ich mit Patch-Anweisungen (Laien-Modus)
+1) Problem in einem Satz + Screenshot beschreiben
+2) Prüfen: **Datei**, **Token**, **genaue Änderung**
+3) Nur diesen Teil ändern und testen (`npm run dev`)
+4) Wenn besser: behalten. Wenn schlechter: Änderung rückgängig machen
 5) Erst wenn stabil: nächstes Thema
 
 
