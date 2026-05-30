@@ -1,8 +1,8 @@
 # waterbubble-col285
 
-> Interactive star map and tool for the Water Bubble colonisation project in Col 285 – Elite Dangerous
+> Interactive star map and tool for the Water Bubble colonisation project in Col 285 - Elite Dangerous
 
-The Water Bubble is a player-driven colonisation initiative in the Col 285 sector. This tool replaces static Discord screenshots with a living, interactive map — showing where systems are, what's happening inside them, and where the bubble is growing.
+The Water Bubble is a player-driven colonisation initiative in the Col 285 sector. This tool replaces static Discord screenshots with a living, interactive map showing where systems are, what's happening inside them, and where the bubble is growing.
 
 ---
 
@@ -10,7 +10,7 @@ The Water Bubble is a player-driven colonisation initiative in the Col 285 secto
 
 ### What is this?
 
-A browser-based 3D star map of the Water Bubble. It shows all systems in the bubble, their economies, factions, colonisation status, and trade relationships. The goal is to make the bubble readable at a glance — for new members and veterans alike.
+A browser-based 3D star map of the Water Bubble. It shows all systems in the bubble, their economies, factions, colonisation status, and trade relationships. The goal is to make the bubble readable at a glance, for new members and veterans alike.
 
 ### What's planned?
 
@@ -24,7 +24,7 @@ The full vision is in [`VISION.md`](./VISION.md).
 
 ### How do I give feedback?
 
-Open a [GitHub Issue](../../issues) — no technical knowledge needed. Just describe what you'd like to see or what doesn't work. Or find us on Discord in the Water Bubble channel.
+Open a [GitHub Issue](../../issues) no technical knowledge needed. Just describe what you'd like to see or what doesn't work. Or find us on Discord in the Water Bubble channel.
 
 ---
 
@@ -106,5 +106,6 @@ The project is in active development. Core map functionality works. See the feat
 
 ---
 
-MIT License — o7
+MIT License 
+o7
 
