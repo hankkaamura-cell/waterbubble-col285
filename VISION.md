@@ -6,7 +6,7 @@
 
 ## What this started as
 
-A personal side project: a browser-based star map for the Water Bubble colonisation initiative in Col 285. Built with TypeScript, Three.js, and Python. The goal was simple – stop updating static images manually and replace them with something alive.
+A personal side project: a browser-based star map for the Water Bubble colonisation initiative in Col 285. Built with TypeScript, Three.js, Python and a lot of AI assistance. The goal was simple – stop updating static images manually and replace them with something alive.
 
 ---
 
@@ -45,6 +45,7 @@ Currently maintained manually on Discord. Goal: migrate into the data layer so t
 - Population per system
 - Number of settlements
 - Notable price phenomena
+- BGS
 
 This is exactly the data our tool should absorb and visualise automatically.
 
@@ -55,7 +56,7 @@ There is a community aspiration for a dedicated Water Bubble webpage.
 
 ## The bigger picture: a platform, not just a tool
 
-Water Bubble is the prototype. 
+Water Bubble is the prototype.
 
 Every organised group of Elite Dangerous players faces the same problems: no shared map, no project history, no way to see what they've collectively built. BGS squadrons, colonisation fleets, exploration groups – they all coordinate in Discord and spreadsheets, with no visual layer that makes their work visible.
 
@@ -71,7 +72,7 @@ This shapes every UX and UI decision from here on.
 - „THE COL 285" and „WB-CC-MKI" in the header come from config – not from code
 - Any squadron can fork the project, drop in their config, and have their own map
 - **The user can type in any reference system** – no hardcoded anchor, full freedom of centre
-- **The user can upload their own CSV** – self-assembled system lists are fully supported; no dependency on Spansh exports. The CSV must include at minimum the Spansh-compatible coordinate fields (Name, X, Y, Z) – all other fields (economy, status, role, faction etc.) are optional enrichment. The CSV must include at minimum the Spansh-compatible coordinate fields (, , , ) – all other fields (economy, status, role, faction etc.) are optional enrichment
+- **The user can upload their own CSV** – self-assembled system lists are fully supported; no dependency on Spansh exports. The CSV must include at minimum the Spansh-compatible coordinate fields (Name, X, Y, Z) – all other fields (economy, status, role, faction etc.) are optional enrichment.
 
 ---
 
@@ -83,6 +84,59 @@ This shapes every UX and UI decision from here on.
 - Smooth zoom, pan, and three-axis view (top, front, side)
 - Connections show actual trade relationships, not just proximity
 - Expansion direction is visually readable at a glance
+
+### 🌌 Visual layers – how the map evolves
+
+The map is built in four visual layers, each adding depth to what the player sees and understands. They are designed to be implemented independently and in sequence.
+
+**Layer 0 — CMDR Location Layer (Project METIS, Phase 1)**
+
+Before the map can show what systems exist, it should show who is where — right now. METIS is the data pipeline that makes this possible. It is a separate module, opt-in per CMDR, local-first by design.
+
+- CMDRs who choose to share their location appear as distinct markers on the bubble map — visually separate from system markers, never confused with them.
+- A CMDR marker is only shown if the CMDR has actively opted in to sharing. No location is displayed without explicit participation.
+- Source priority follows the METIS decision logic: fresh API/EDDN/EDMC report wins, then local journal, then best-guess cache, then unknown. The frontend only needs to consume what the METIS backend reports — it does not need to know the source.
+- The freshness of a location is part of the data but is not displayed as a visible timestamp. A CMDR is either present or not — staleness is handled at the backend level before the data reaches the map.
+- METIS is Phase 1 of a larger roadmap (Phase 2: activity tracking, Phase 3: live squadron sync). The visual layer should be designed so these phases can be added without restructuring the map.
+
+Data source: METIS backend report endpoint → squadron board endpoint → frontend.
+Technical specification: `backend/app/metis_location_sharing.py` and `metis_location_db.py` *(pending approval and merge)*.
+
+**Layer 1 — The Bubble Map (exists, needs enhancement)**
+
+The current map shows systems as sprite markers in 3D space. The next step is atmosphere and legibility:
+
+- Colonised systems should visually glow — a selective bloom effect that makes inhabited systems immediately readable at any zoom level. Uncolonised systems remain dark and quiet.
+- CMDR markers (from Layer 0) appear as a fourth distinct marker type alongside system markers. They must be visually unambiguous — different shape, different colour register, different interaction behaviour.
+- As the dataset grows, marker rendering should move to instanced geometry for performance. This is not urgent at current scale but should be designed for from the start.
+- Visual references: Three.js selective bloom example (`webgpu_postprocessing_bloom_selective`), instanced billboards (`webgl_buffergeometry_instancing_billboards`).
+
+**Layer 2 — Zone visualisation (not yet built)**
+
+Core, Auxiliary and Frontier are community concepts that should become visible in the map — not just data fields, but spatial volumes the eye can read.
+
+- Each zone should appear as a soft, semi-transparent volume around its systems. Not a hard boundary — more like a cloud that fades at the edges.
+- The shape follows the actual geometry of the systems, not an artificial sphere. A convex hull or volumetric approach is preferred over a radius circle.
+- Visual references: Three.js volume cloud example (`webgl_volume_cloud`), `THREE.ConvexGeometry` from addons.
+
+**Layer 3 — Orrery View (not yet built)**
+
+When a commander clicks on a system in the map, the galaxy view fades and the camera flies into a stylised, holographic representation of that system — its star or stars at the centre, planets and moons as glowing abstract spheres, stations as distinct technical glyphs, orbit rings as faint transparent lines.
+
+The goal is legibility and atmosphere, not physical accuracy. Distances are scaled logarithmically. The look is HUD, not simulation.
+
+Key design decisions:
+- Galaxy view and system view are two separate `THREE.Group` objects within the same scene — no page navigation, no hard reload.
+- System data is loaded live from EDSM on click and cached in-memory for repeat visits.
+- If one or more CMDRs (who have opted in via METIS) are currently in this system, they appear as named markers in the orrery view — near the station they were last reported at if known, otherwise in a neutral orbit position.
+- The camera transition into and out of the system view is animated — the flight is part of the experience.
+- Labels, tooltips and detail panels are HTML overlays, not 3D text.
+- Hover shows name and type. Click opens a detail panel with body or station data. Click on a CMDR marker shows CMDR name and last reported location source.
+- ESC or a visible back button returns to the galaxy view.
+
+Data source: EDSM API (`/api-system-v1/bodies`, `/api-system-v1/stations`) for bodies and stations. METIS backend for CMDR positions within the system.
+Visual reference: `future-ui-jet.vercel.app` — concept only, not open source.
+Technical specification: `docs/ORRERY_SPEC.md` *(see that file for full implementation detail and open questions)*.
 
 ### 🔴 The Console Frame
 - No longer static – lights blink, indicators pulse
@@ -142,7 +196,7 @@ The system detail view is where data becomes history, and history becomes motiva
 
 ---
 
-## Current status (as of project handover)
+## Current status (as of 2026-05-30)
 
 | Feature | Status |
 |---|---|
@@ -153,12 +207,21 @@ The system detail view is where data becomes history, and history becomes motiva
 | Economy & status filter | ✅ Working |
 | Radius filter with dropdown | ✅ Working |
 | Live Spansh connection (local proxy) | ✅ Working |
-| FastAPI backend (Tsumikaze) | ✅ Working |
+| FastAPI backend (FraggertheBoss) | ✅ Working |
 | EDDN live market listener | ✅ Working |
 | Trade route calculator (sample data) | ✅ Working |
 | System status model (7 states) | ✅ Working |
 | System roles | ✅ Working |
 | Standalone HTML version | ✅ Working |
+| METIS location agent (`metis_location_agent.py`) | ❌ Not built |
+| METIS backend endpoints (location DB + sharing) | ❌ Not built |
+| CMDR markers on bubble map (Layer 0) | ❌ Not built |
+| CMDR markers in Orrery View (Layer 3) | ❌ Not built |
+| Selective bloom (colonised systems glow) | ❌ Not built |
+| Instanced marker rendering (performance) | ❌ Not built |
+| Zone visualisation (Core / Auxiliary / Frontier) | ❌ Not built |
+| Orrery View (system detail, planets in 3D) | ❌ Not built |
+| Camera transition map → orrery | ❌ Not built |
 | Group config system | ❌ Not built |
 | CMDR login / access control | ❌ Not built |
 | EDDN pad size fix (trade loops) | ❌ In progress |
@@ -173,7 +236,7 @@ The system detail view is where data becomes history, and history becomes motiva
 ## Technical foundation
 
 - **Frontend:** TypeScript + Three.js (main app) / Vanilla JS (standalone HTML)
-- **Backend:** Python / FastAPI + EDDN listener (Tsumikaze bootstrap)
+- **Backend:** Python / FastAPI + EDDN listener (FraggertheBoss bootstrap)
 - **Data:** Spansh API + EDDN live stream + CSV export
 - **Status model:** `unclaimed → planned → claimed → under_construction → colonized → developed → blocked`
 - **Role model:** `Industrial / Refinery / High Tech / Agriculture / Tourism / Military / Service / Bridge / Strategic`
@@ -182,7 +245,7 @@ The system detail view is where data becomes history, and history becomes motiva
 
 ## How to contribute
 
-The project foundation is solid and well-commented, but it needs additional contributors for polish, deployment, long-term maintenance, and feature expansion.
+The original developer built this with AI assistance and reached the limits of what they could do alone. The foundation is solid and well-commented.
 
 If you want to contribute:
 1. Fork the repository
