@@ -45,7 +45,6 @@ Currently maintained manually on Discord. Goal: migrate into the data layer so t
 - Population per system
 - Number of settlements
 - Notable price phenomena
-- BGS
 
 This is exactly the data our tool should absorb and visualise automatically.
 
@@ -73,6 +72,58 @@ This shapes every UX and UI decision from here on.
 - Any squadron can fork the project, drop in their config, and have their own map
 - **The user can type in any reference system** – no hardcoded anchor, full freedom of centre
 - **The user can upload their own CSV** – self-assembled system lists are fully supported; no dependency on Spansh exports. The CSV must include at minimum the Spansh-compatible coordinate fields (Name, X, Y, Z) – all other fields (economy, status, role, faction etc.) are optional enrichment.
+
+---
+
+## Strategic position: a command map, not another database
+
+Water Bubble should not become another general Elite Dangerous database, another route plotter, or another colonisation spreadsheet.
+
+Those tools already exist, and several of them are excellent:
+
+- **EDSM** is the canonical community source for system, body and coordinate data.
+- **Spansh** is the strongest routing and large-scale data backbone.
+- **Inara** is the dominant companion database for stations, factions, markets, squadrons and commanders.
+- **Raven Colonial** is the current reference tool for colonisation project planning, construction progress and Fleet Carrier logistics.
+- **EDDiscovery**, **EDGIS** and **ED3D-Galaxy-Map** show that 3D spatial views are possible and useful.
+
+The opportunity for Water Bubble is different:
+
+> **Water Bubble is the visual command layer for a colonisation region.**
+
+It should make a player-driven region readable as a place: where systems are, how they relate to each other, what is being built, where commanders are active, what role each system plays, and how the bubble grows over time.
+
+The project should prioritise **visual synthesis** over duplicate data collection. If another tool already maintains a data domain well, Water Bubble should integrate or reference it rather than rebuild it.
+
+### Product identity
+
+> **Water Bubble is a tactical 3D command map for Elite Dangerous colonisation groups — starting with the Water Bubble in Col 285.**
+
+It combines three levels of understanding:
+
+1. **Bubble Map** — Where are our systems? Which ones are core, auxiliary or frontier? Which are colonised, planned, blocked or under construction?
+2. **System Orrery** — What is inside this system? Which stars, planets, moons, stations and commander markers are known?
+3. **Operations Overlay** — What is happening here? Which systems need cargo, attention, BGS work or construction support?
+
+### Relationship to other tools
+
+**Raven Colonial — partner, not competitor.** Raven Colonial is strong at colonisation mechanics: projects, construction progress, Fleet Carrier cargo and build requirements. Water Bubble should not rebuild this logic. A future integration would treat Raven Colonial as a data source and render live colonisation progress in 3D — the one thing Raven Colonial itself does not do.
+
+**Spansh and EDSM — backbone, not UI model.** Their role is data infrastructure. Water Bubble normalises their data into its own internal model and exposes it through the local backend. The frontend should not depend directly on multiple external APIs.
+
+**ED3D-Galaxy-Map — learn from, do not fork.** It proved that Elite Dangerous system lists can be rendered as configurable 3D maps. Water Bubble is a modern TypeScript/Three.js/FastAPI reinterpretation, not a fork. Study its JSON-driven system schema, category/HUD filter model, and route rendering.
+
+### Strategic design principles
+
+**1. Integrate before rebuilding.** Before implementing a feature, ask: does Raven Colonial, Spansh, EDSM, Inara or BGS-Tally already maintain this better? If yes, prefer integration over rebuilding.
+
+**2. Water Bubble first, platform second.** The first successful product must serve the Water Bubble well. A tool for everyone that is not excellent for its first community will not survive. Make the Water Bubble useful and beautiful first. Then generalise.
+
+**3. Visual synthesis over exhaustive detail.** The map should not display every possible field from every external API. It should make the next decision easier: Where is the centre of activity? Which systems are quiet, active or blocked? Where are commanders present? Which systems need attention?
+
+**4. Graceful uncertainty.** Elite Dangerous community data is incomplete and uneven. The UI should never pretend to know more than the data supports. Use language such as `known bodies`, `last updated`, `inferred relation`, `no station data available`, `commander location hidden or unknown`.
+
+**5. Atmosphere must serve readability.** The console frame, HUD styling, glow, holographic shaders and animated transitions are part of the product identity — not decorative extras. But every effect should answer one of three questions: What is this? How important is it? What can I do with it?
 
 ---
 
@@ -233,6 +284,35 @@ The system detail view is where data becomes history, and history becomes motiva
 
 ---
 
+## Implementation roadmap
+
+### Phase A — Stabilise the Bubble Map
+Make the current 3D region map feel like the core product. Reliable system markers, stable hover and click behaviour, readable economy/status/role colours, reference system and distance logic, Core/Auxiliary/Frontier fields in data, search and filters that commanders can actually use, clean fallback from backend data to bundled CSV, basic export workflow. Do this before adding deep external integrations.
+
+### Phase B — Build the Orrery MVP
+Prove that clicking a system can open a readable system-level view. In scope: `viewState` (galaxy / transition / system), separate `galaxyGroup` and `systemGroup`, click a system to open system detail mode, back button / ESC to return, camera transition, central star marker, schematic planets and stations, hover tooltip and click detail panel. Out of scope for MVP: exact orbital mechanics, live EDSM data, CMDR markers.
+
+### Phase C — Wire live body and station data
+Connect the backend detail endpoint to EDSM and Spansh. The frontend renders only a normalised internal model — it should not care whether the backend used EDSM, Spansh, cache or CSV. Degrade gracefully when data is incomplete or unavailable.
+
+### Phase D — Add Water-Bubble-specific operational overlays
+Once the Bubble Map and Orrery View are stable: colonisation status overlay, construction progress overlay, BGS state overlay, CMDR opt-in location markers (METIS), system notes and claims, project history and narrative timeline. This is where Water Bubble becomes more than a map.
+
+### Phase E — Integrate external operational tools
+Raven Colonial project and Fleet Carrier cargo data, BGS-Tally activity and state data, Inara links, Spansh links, EDSM links. First integration candidate: Raven Colonial project status → system colour / badge / detail panel overlay.
+
+### Feature priority summary
+
+**Must build first:** robust Bubble Map interaction, clean system data model, `galaxyGroup` / `systemGroup` separation, Orrery MVP, graceful error states.
+
+**Should build next:** selective glow for colonised systems, zone visualisation (Core / Auxiliary / Frontier), system detail panel with external links, cached EDSM/Spansh bodies and stations, commander opt-in marker architecture.
+
+**Later — only after product core works:** full trade route profitability engine, Raven Colonial live integration, BGS-Tally integration, commander login and role management, public deployment, custom group configuration UI, advanced shader polish, animated console frame and ambient sound.
+
+**Avoid for now:** hard-coding current colonisation economy rules, rebuilding Raven Colonial's planning logic, trying to render the entire galaxy, exact orbital simulation, 3D text labels everywhere, making the first release dependent on multiple external live APIs.
+
+---
+
 ## Technical foundation
 
 - **Frontend:** TypeScript + Three.js (main app) / Vanilla JS (standalone HTML)
@@ -259,10 +339,15 @@ All skill levels welcome. The project needs developers, designers, Elite Dangero
 
 ## A note on scope
 
-This tool was born from one colonisation project in one corner of the galaxy. But Elite Dangerous is a big place, and the problems it solves – *where are we, what's happening, where should we go next* – are universal to any organised group of players.
+This tool was born from one colonisation project in one corner of the galaxy. That origin is a strength, not a limitation.
 
-Water Bubble is the proof of concept. The platform is for everyone.
+Water Bubble gives the project a real community, real systems, real coordination problems and real stories. The architecture should remain general enough for other groups, but the first duty is to make the Water Bubble legible, useful and alive.
 
-Build it right, and it works for everyone.
+The goal is not to compete with EDSM, Spansh, Inara or Raven Colonial. The goal is to make their data spatial, operational and visible.
+
+Water Bubble is the proof of concept.
+The platform is the long game.
+
+Build the command map well, and other groups can bring their own bubble.
 
 o7
